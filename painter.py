@@ -4,11 +4,13 @@ import configparser
 from config_wrapper import config
 from threading import Thread
 from queue import *
+from events import InnerDrawingInformationEvent
+import logging
+import helpers
 
-drawing_queue = Queue()
+logger = logging.getLogger(__name__)
 
-
-class EventMaker:
+class Painter:
     # Tracks whether left mouse is down
     left_but = "up"
 
@@ -22,7 +24,7 @@ class EventMaker:
 
     def left_but_down(self, event=None):
         self.left_but = "down"
-
+        self.begin_draw = True
         # Set x & y when mouse is clicked
         self.x1_line_pt = event.x
         self.y1_line_pt = event.y
@@ -40,53 +42,58 @@ class EventMaker:
 
     def motion(self, event=None):
         if event is not None and self.left_but == 'down':
-
             # Make sure x and y have a value
-            if self.x_pos is not None and self.y_pos is not None:
-                event.widget.create_line(self.x_pos, self.y_pos, event.x, event.y, smooth=tkinter.TRUE)
-                drawing_queue.put((event, self.x_pos, self.y_pos))  #
+            # if self.x_pos is not None and self.y_pos is not None:
+            color = 0 if self.drawing_color == 'white' else 1
 
-            self.x_pos = event.x
-            self.y_pos = event.y
-            print("x = " + str(event.x) + "\ty = " + str(event.y))
+            self.master_queue.put(InnerDrawingInformationEvent(helpers.get_current_timestamp(), event.x, event.y, color, self.begin_draw))
+            self.begin_draw = False
 
-    def __init__(self, master):
-        self.master = master
+    def __init__(self, paint_queue, master_queue):
+        self.master = tkinter.Tk()
+        self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.paint_queue = paint_queue
+        self.master_queue = master_queue
         self.drawing_area = tkinter.Canvas(self.master, bg='white', width=config.getint('Tkinter', 'CanvasX'), height=config.getint('Tkinter', 'CanvasY'))
         self.drawing_area.pack()
-        self.drawing_button = tkinter.Button(self.master, text="Draw/Erase")
+        self.drawing_button = tkinter.Button(self.master, text="Draw/Erase", command=self.change_drawing_color)
         self.drawing_button.pack(side=tkinter.LEFT, expand=tkinter.TRUE)
         self.drawing_button = tkinter.Button(self.master, text="Take board")
         self.drawing_button.pack(side=tkinter.RIGHT, expand=tkinter.TRUE)
         self.drawing_area.bind("<Motion>", self.motion)
         self.drawing_area.bind("<ButtonPress-1>", self.left_but_down)
         self.drawing_area.bind("<ButtonRelease-1>", self.left_but_up)
+        self.running = True
+        self.drawing_color = 'black'
+        self.begin_draw = False
 
-    def getrda(self):
-        return self.drawing_area
+    def start_drawing(self):
+        while self.running:
+            self.make_mouse_events()
+            while not self.paint_queue.empty():
+                (x, y, color, begin) = self.paint_queue.get()
+                color = 'white' if color == 0 else 'black'
+                if (not self.x_pos and not self.y_pos):
+                    self.x_pos = x
+                    self.y_pos = y
 
+                if begin:
+                    self.x_pos = x
+                    self.y_pos = y
 
-running = True
+                # self.drawing_area.create_line(self.x_pos, self.y_pos, data['x'], data['y'], fill=color)
+                self.drawing_area.create_rectangle((x, y)*2, )
+                self.x_pos = x
+                self.y_pos = y
 
+    def make_mouse_events(self):
+        if self.running:
+            self.master.update_idletasks()
+            self.master.update()
 
-def on_closing():
-    global running
-    running = False
+    def change_drawing_color(self):
+        self.drawing_color = 'white' if self.drawing_color == 'black' else 'black'
 
-
-def make_mouse_events(root: tkinter.Tk):
-    if running:
-        root.update_idletasks()
-        root.update()
-
-
-if __name__ == "__main__":
-    root = tkinter.Tk()
-    root.protocol("WM_DELETE_WINDOW", on_closing)
-    paint_app = EventMaker(root)
-    drawing_area = paint_app.getrda()
-    while running:
-        make_mouse_events(root)
-        while not drawing_queue.empty():
-            (e) = drawing_queue.get()
-            e.widget.create_line(e.x, e.y, e.x, e.y, smooth=tkinter.TRUE)
+    def on_closing(self):
+        global running
+        running = False

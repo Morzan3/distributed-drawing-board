@@ -14,6 +14,9 @@ class TimeSynchronizer(threading.Thread):
 
     def run(self):
         while not self._stop_event.is_set():
-            response = self.ntp_client.request('europe.pool.ntp.org', version=3)
-            self.time_offset[0] = response.offset
-            time.sleep(5)
+            try:
+                response = self.ntp_client.request('europe.pool.ntp.org', version=3)
+                self.time_offset[0] = response.offset
+                time.sleep(5)
+            except Exception:
+                pass

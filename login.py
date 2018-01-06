@@ -37,10 +37,10 @@ class LoginPanel(tk.Frame):
         self.make_widgets()
 
     def make_widgets(self):
-        self.top_frame = tk.Frame(root)
+        self.top_frame = tk.Frame(self.root)
         self.top_frame.pack(side=tkinter.TOP)
 
-        self.bottom_frame = tk.Frame(root)
+        self.bottom_frame = tk.Frame(self.root)
         self.bottom_frame.pack(side=tkinter.BOTTOM)
 
         self.IP_label = tk.Label(self.top_frame, text="Ip address")

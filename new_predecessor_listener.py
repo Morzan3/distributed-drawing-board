@@ -12,13 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 class NewPredecessorListener(threading.Thread):
-    def __init__(self, event_queue):
+    def __init__(self, event_queue, init_data=None):
         super(NewPredecessorListener, self).__init__()
         self.event_queue = event_queue
         self.listening_port = config.getint('NewPredecessorListener', 'Port')
         self.predecessor_data = None
         self.predecessor_listening_thread = None
         self._stop_event = threading.Event()
+        self.init_data = init_data
 
     def stop(self):
         logging.info('Sending signal to stop new predecessor_listener')
@@ -29,13 +30,18 @@ class NewPredecessorListener(threading.Thread):
         listening_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listening_socket.bind(('localhost', self.listening_port))
         listening_socket.listen()
-        logger.info('Server is listening for new predecessors'.format(self.listening_port))
+        if(self.init_data):
+            self.predecessor_listening_thread = PredecessorListener(self.event_queue, self.init_data)
+            self.predecessor_listening_thread.start()
+
         while not self._stop_event.is_set():
+            logger.info("'Server is listening for new predecessors {}".format(listening_socket))
             connection, client_address = listening_socket.accept()
-            self.predecessor_listening_thread.stop()
-            self.predecessor_data = {connection: connection, client_address: client_address}
+            if self.predecessor_listening_thread:
+                self.predecessor_listening_thread.stop()
+            self.predecessor_data = {'connection': connection, 'client_address': client_address}
             self.event_queue.put(NewPredecessorRequestEvent(self.predecessor_data))
             self.predecessor_listening_thread = PredecessorListener(self.event_queue, self.predecessor_data)
-            self.predecessor_listening_thread.run()
+            self.predecessor_listening_thread.start()
 
         logger.info('New predecessor_listener stopped listening')
