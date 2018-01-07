@@ -29,18 +29,13 @@ def connect_to_existing_client(connection):
     new_client_listener.start()
 
     # Listening for a new predecessor thread
-    init_data = {
-        'connection': connection,
-        'addres': None
-    }
-    new_predecessor_listener = NewPredecessorListener(main_queue, init_data)
+    new_predecessor_listener = NewPredecessorListener(main_queue)
     new_predecessor_listener.start()
 
 
     data = connection.recv(1048576)
-    print(data)
     init_data = (json.loads(data.decode('utf-8')))['data']
-    model = ModelThread(main_queue, paint_queue, time_offset, init_data)
+    model = ModelThread(main_queue, paint_queue, time_offset, init_data, connection)
     model.start()
 
     painter = Painter(paint_queue, main_queue)

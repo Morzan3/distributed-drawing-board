@@ -2,7 +2,7 @@ from events import InnerNextHopBroken
 import threading
 import logging
 import json
-
+import helpers
 logger = logging.getLogger(__name__)
 # This is thread responsible for listening for predecessor
 
@@ -23,11 +23,12 @@ class MessageSender(threading.Thread):
         logger.info('Thread sending message started')
         while not self._stop_event.is_set():
             (e) = self.message_queue.get()
-            message = {'type': e.event_type.value, 'data': e.data}
-            message_json = json.dumps(message)
-            # logger.info("Sending: {}".format(message_json))
             try:
-                self.connection.send(message_json.encode('utf-8'))
+                print(e)
+                message = helpers.event_to_message(e)
+                message_size = (len(message)).to_bytes(8, byteorder='big')
+                self.connection.send(message_size)
+                self.connection.send(message)
             except Exception:
                 self.event_queue.put(InnerNextHopBroken())
                 return

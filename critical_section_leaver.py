@@ -1,20 +1,19 @@
-from events import PredecessorMessageEvent, DrawingInformationEvent
 import threading
 import logging
 import json
-from events import EventType, DrawingInformationEvent
+from events import InnerLeavingCriticalSection
 import time
 logger = logging.getLogger(__name__)
-# This is thread responsible for listening for predecessor
+# This is thread responsible for putting a special event
 
-
-class PredecessorListener(threading.Thread):
+class CriticalSectionLeaver(threading.Thread):
     def __init__(self, event_queue):
-        super(PredecessorListener, self).__init__()
+        super(CriticalSectionLeaver, self).__init__()
         self.event_queue = event_queue
 
 
     def run(self):
-        time.sleep(20)
-        self.event_queue.put
+        time.sleep(5)
+        self.event_queue.put(InnerLeavingCriticalSection())
+        return
 

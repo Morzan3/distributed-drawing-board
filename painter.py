@@ -4,11 +4,20 @@ import configparser
 from config_wrapper import config
 from threading import Thread
 from queue import *
-from events import InnerDrawingInformationEvent
+from events import InnerDrawingInformationEvent, InnerWantToEnterCriticalSection
 import logging
 import helpers
+from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+class DrawingQueueEvent(Enum):
+    DRAWING = 1
+    BOARD_CLOSED = 2
+    BOARD_OPEN = 3
+    BOARD_CONTROLLED = 4
+
+
 
 class Painter:
     # Tracks whether left mouse is down
@@ -51,6 +60,7 @@ class Painter:
 
     def __init__(self, paint_queue, master_queue):
         self.master = tkinter.Tk()
+        self.critical_section_string = tk.StringVar()
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.paint_queue = paint_queue
         self.master_queue = master_queue
@@ -58,33 +68,46 @@ class Painter:
         self.drawing_area.pack()
         self.drawing_button = tkinter.Button(self.master, text="Draw/Erase", command=self.change_drawing_color)
         self.drawing_button.pack(side=tkinter.LEFT, expand=tkinter.TRUE)
-        self.drawing_button = tkinter.Button(self.master, text="Take board")
+        self.drawing_button = tkinter.Button(self.master, text="Take board", command=self.want_to_enter_critial_section)
         self.drawing_button.pack(side=tkinter.RIGHT, expand=tkinter.TRUE)
+        self.critical_section = tkinter.Label(self.master, textvariable=self.critical_section_string)
+        self.critical_section.pack(side=tk.RIGHT, expand=tkinter.TRUE)
         self.drawing_area.bind("<Motion>", self.motion)
         self.drawing_area.bind("<ButtonPress-1>", self.left_but_down)
         self.drawing_area.bind("<ButtonRelease-1>", self.left_but_up)
         self.running = True
         self.drawing_color = 'black'
         self.begin_draw = False
+        self.critical_section_string.set('Board Open')
 
     def start_drawing(self):
         while self.running:
             self.make_mouse_events()
             while not self.paint_queue.empty():
-                (x, y, color, begin) = self.paint_queue.get()
-                color = 'white' if color == 0 else 'black'
-                if (not self.x_pos and not self.y_pos):
+                e = self.paint_queue.get()
+                if e['type'] == DrawingQueueEvent.DRAWING:
+                    x, y, color, begin = e['data']
+                    color = 'white' if color == 0 else 'black'
+                    if (not self.x_pos and not self.y_pos):
+                        self.x_pos = x
+                        self.y_pos = y
+
+                    if begin:
+                        self.x_pos = x
+                        self.y_pos = y
+
+                    # self.drawing_area.create_line(self.x_pos, self.y_pos, data['x'], data['y'], fill=color)
+                    self.drawing_area.create_rectangle((x, y)*2, )
                     self.x_pos = x
                     self.y_pos = y
-
-                if begin:
-                    self.x_pos = x
-                    self.y_pos = y
-
-                # self.drawing_area.create_line(self.x_pos, self.y_pos, data['x'], data['y'], fill=color)
-                self.drawing_area.create_rectangle((x, y)*2, )
-                self.x_pos = x
-                self.y_pos = y
+                elif e['type'] == DrawingQueueEvent.BOARD_CLOSED:
+                    self.critical_section_string.set("Board closed")
+                elif e['type'] == DrawingQueueEvent.BOARD_OPEN:
+                    self.critical_section_string.set("Board open")
+                elif e['type'] == DrawingQueueEvent.BOARD_CONTROLLED:
+                    self.critical_section_string.set("Board yours")
+                else:
+                    raise Exception("Wrong event type")
 
     def make_mouse_events(self):
         if self.running:
@@ -97,3 +120,6 @@ class Painter:
     def on_closing(self):
         global running
         running = False
+
+    def want_to_enter_critial_section(self):
+        self.master_queue.put(InnerWantToEnterCriticalSection())

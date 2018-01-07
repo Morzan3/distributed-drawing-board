@@ -14,9 +14,10 @@ import config_wrapper
 
 if len(sys.argv) > 1 and sys.argv[1] == '0':
     config_wrapper.initialize(0)
-else:
+elif len(sys.argv) > 1 and sys.argv[1] == '1':
     config_wrapper.initialize(1)
-
+elif len(sys.argv) > 1 and sys.argv[1] == '2':
+    config_wrapper.initialize(2)
 
 
 # Section only for testing purpose

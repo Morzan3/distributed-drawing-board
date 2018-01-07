@@ -30,12 +30,13 @@ class NewPredecessorListener(threading.Thread):
         listening_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listening_socket.bind(('localhost', self.listening_port))
         listening_socket.listen()
-        if(self.init_data):
-            self.predecessor_listening_thread = PredecessorListener(self.event_queue, self.init_data)
-            self.predecessor_listening_thread.start()
+        # if(self.init_data):
+        #     print(self.init_data)
+        #     self.predecessor_listening_thread = PredecessorListener(self.event_queue, self.init_data)
+        #     self.predecessor_listening_thread.start()
 
         while not self._stop_event.is_set():
-            logger.info("'Server is listening for new predecessors {}".format(listening_socket))
+            logger.info("'Server is listening for new predecessors on port {}".format(self.listening_port))
             connection, client_address = listening_socket.accept()
             if self.predecessor_listening_thread:
                 self.predecessor_listening_thread.stop()
