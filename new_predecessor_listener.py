@@ -33,7 +33,7 @@ class NewPredecessorListener(threading.Thread):
         logger.info("'Server is listening for new predecessors on port {}".format(self.listening_port))
         while not self._stop_event.is_set():
             connection, client_address = listening_socket.accept()
-            logger.info("New Predecessor connected")
+            logger.info("New Predecessor connected: {} {}".format(connection, client_address))
             if self.predecessor_listening_thread:
                 self.predecessor_listening_thread.stop()
             self.predecessor_data = {'connection': connection, 'client_address': client_address}

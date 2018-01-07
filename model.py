@@ -46,9 +46,12 @@ class ModelThread(threading.Thread):
         else:
             self.next_hop_info = init_data['next_hop']
             if not init_data['next_next_hop']:
+                # If there is no next_next_hop init data in the response we are the second client so we set
+                # next next hop as our address
                 self.next_next_hop_info = (helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port'))
             else:
                 self.next_next_hop_info = init_data['next_next_hop']
+
             self.predecessor = init_connection.getsockname()
             ip, port = init_data['next_hop']
             logger.info(ip, port)
@@ -59,10 +62,15 @@ class ModelThread(threading.Thread):
             self.message_sender.start()
             self.initialize_board(init_data['board_state'])
 
+            # We signal that client has initialized properly
+            self.init_connection.shutdown()
+            self.init_connection.close()
+
 
     def run(self):
         while not self._stop_event.is_set():
             (e) = self.event_queue.get()
+            print(e)
             handler_function = self.handlers[type(e).__name__]
             handler_function(e)
 
@@ -141,6 +149,18 @@ class ModelThread(threading.Thread):
         # 3.When we succesfully connect to our next next hop we want to send recovery token question
         #   in case that the dead client was holding the token the moment he died
 
+        ip, _ = self.next_next_hop_info
+        # If we are the only client left we reset the data to the initial state
+        if ip == helpers.get_self_ip_address():
+            self.next_hop_info = None
+            self.next_next_hop_info = None
+            if self.message_sender:
+                self.message_sender.stop()
+            self.sending_queue = None
+            self.message_sender = None
+            self.predecessor = None
+            self.last_token = 0
+            return
 
         def connect_to_next_next_hop():
             ip, port = self.next_next_hop_info
@@ -157,7 +177,6 @@ class ModelThread(threading.Thread):
                 print(e)
 
         ip, port = self.next_hop_info
-
         try:
             s = socket.create_connection((ip, port))
             self.sending_queue = queue.Queue(maxsize=0)
@@ -171,6 +190,7 @@ class ModelThread(threading.Thread):
     #                                      Event handlers
     ############################################################################################
     def handle_new_client_request(self, event):
+        first_client = not self.next_hop_info
         # When we detect a new client connecting we want to;
         # 1.Send him the initial data over the connection we already established
         # 2.Connect to him as a predecessor
@@ -178,34 +198,53 @@ class ModelThread(threading.Thread):
         # Gather the initial board state
         marked_spots = [(x, y) for x in range(len(self.board_state)) for y in range(len(self.board_state[x])) if self.board_state[x][y]]
 
-        next_hop = self.next_hop_info if self.next_hop_info else (helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port'))
+        # If we have next hop information we send it, if we do not have we are the first client so we send our
+        # information as the first hop information
+        next_hop = (helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port')) if first_client else self.next_hop_info
 
+        # If we are the first client next next hop is None
         response = events.NewClientResponseEvent(next_hop, self.next_next_hop_info, marked_spots)
-        if self.next_hop_info:
-            self.next_next_hop_info = self.next_hop_info
-        self.next_hop_info = event.data['address']
-
         message = helpers.event_to_message(response)
         event.data['connection'].send(message)
 
-        # If we do not have a nex_next hop info this means we are the first client so we set out next next hope as our addres
-        if not self.next_next_hop_info:
-            self.next_next_hop_info = (
-                helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port'))
 
-        # In the final application all client will be listening for new clients and new predecessors on the same port
-        # for testing purposes the ports must be different
-        # TODO uncomment in final application
-        # s = socket.create_connection(('localhost', config.getint('NewPredecessorListener', 'Port')))
+        try:
+            message = event.data['connection'].recv(8)
+        except Exception as ex:
+            if (message == b''):
+                # Only case when we have a succesfull read of 0 bytes is when other socket shutdowns normally
+                pass
+            else:
+                #Client did not initializ correctly so we abort the process
+                return
+
+        # If we are not the first client we have to update our next next hop to our previous next hop
+        if not first_client:
+            self.next_next_hop_info = self.next_hop_info
+        else:
+            self.next_next_hop_info = (
+                helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port')
+            )
+
+        # Then we update our next hop info with the newest client request
+        self.next_hop_info = event.data['address']
+
+
+        # We stop current message sender if it exists
         if self.message_sender:
             self.message_sender.stop()
-        self.sending_queue = queue.Queue(maxsize=0)
+
         ip, _ = self.next_hop_info
-        logger.info("Establishing connection to: {}".format(config.getint('NewPredecessorListener', 'Port')))
+        logger.info("Establishing connection to: {} {}".format(ip, config.getint('NewPredecessorListener', 'Port')))
+        # We establish a new connection and a new message sender
         connection = socket.create_connection((ip, config.getint('NewPredecessorListener', 'Port')), 100)
+        self.sending_queue = queue.Queue(maxsize=0)
         self.message_sender = MessageSender(self.event_queue, self.sending_queue, connection)
         self.message_sender.start()
-        self.sending_queue.put(events.TokenPassEvent(self.last_token))
+
+        # If this is the first client we start the token pass
+        if first_client:
+            self.sending_queue.put(events.TokenPassEvent(self.last_token))
 
 
     def handle_drawing_information_event(self, event):
@@ -285,6 +324,7 @@ class ModelThread(threading.Thread):
             self.paint_queue.put({'type': DrawingQueueEvent.BOARD_CONTROLLED})
             self.sending_queue.put(events.EnteredCriticalSectionEvent(timestamp, self.uuid))
         else:
+            pass
             self.sending_queue.put(events.TokenPassEvent(token))
 
     def handle_new_next_next_hop_event(self, event):
