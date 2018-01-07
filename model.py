@@ -145,8 +145,12 @@ class ModelThread(threading.Thread):
     def inner_leaving_critical_section_event(self, _):
         self.critical_section = None
         self.paint_queue.put({"type": DrawingQueueEvent.BOARD_OPEN})
-        self.sending_queue.put(events.LeavingCriticalSectionEvent(helpers.get_current_timestamp(), self.uuid))
-        self.sending_queue.put(events.TokenPassEvent(self.last_token))
+        if self.sending_queue:
+            self.sending_queue.put(events.LeavingCriticalSectionEvent(helpers.get_current_timestamp(), self.uuid))
+            self.sending_queue.put(events.TokenPassEvent(self.last_token))
+        else:
+            self.event_queue.put(events.LeavingCriticalSectionEvent(helpers.get_current_timestamp(), self.uuid))
+            self.event_queue.put(events.TokenPassEvent(self.last_token))
 
 
     def inner_next_hop_broken_event(self, event):

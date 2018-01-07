@@ -52,7 +52,7 @@ class PredecessorListener(threading.Thread):
         elif message_type == events.EventType.TOKEN_RECEIVED_QUESTION:
             self.event_queue.put(events.TokenReceivedQuestionEvent(data['token']))
         elif message_type == events.EventType.DUMMY_MESSAGE:
-            self.event_queue.put(events.DummyMessageEvent(data['uuid']))
+            self.event_queue.put(events.DummyMessageEvent(data['ip']))
         else:
             print(parsed_message)
             raise Exception("Not implemented yet")

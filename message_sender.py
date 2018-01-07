@@ -26,7 +26,6 @@ class MessageSender(threading.Thread):
             try:
                 message = helpers.event_to_message(e)
                 message_size = (len(message)).to_bytes(8, byteorder='big')
-                print(message_size)
                 self.connection.send(message_size)
                 self.connection.send(message)
             except Exception as e:
