@@ -4,7 +4,9 @@ import tkinter.font
 import socket
 from tkinter import messagebox
 import logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+# logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(name)s - %(message)s', level=logging.INFO)
+
 logger = logging.getLogger(__name__)
 
 from main import connect_to_existing_client, start_new_group
@@ -26,7 +28,7 @@ if len(sys.argv) > 1 and sys.argv[1] == '0':
 else:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     logger.info('Connecting to: {}'.format(config_wrapper.config.getint('NewClientListener', 'Port')))
-    s.connect(('192.168.56.129', config_wrapper.config.getint('NewClientListener', 'Port')))
+    s.connect(('192.168.56.130', config_wrapper.config.getint('NewClientListener', 'Port')))
     connect_to_existing_client(s)
 
 class LoginPanel(tk.Frame):

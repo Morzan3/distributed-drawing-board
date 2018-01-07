@@ -42,7 +42,6 @@ class PredecessorListener(threading.Thread):
                                         data['color'], data['begin'])
             )
         elif message_type == events.EventType.TOKEN_PASS:
-            print(data)
             self.event_queue.put(events.TokenPassEvent(data['token']))
         elif message_type == events.EventType.SET_NEW_NEXT_NEXT_HOP:
             self.event_queue.put(events.NewNextNextHop(data['new_address'], data['destination_next_hop']))
