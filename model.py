@@ -53,7 +53,7 @@ class ModelThread(threading.Thread):
             ip, port = init_data['next_hop']
             logger.info(ip, port)
             # TODO change for ip address
-            s = socket.create_connection(('localhost', port))
+            s = socket.create_connection((ip, config.getint('NewPredecessorListener', 'Port')))
             self.sending_queue = queue.Queue(maxsize=0)
             self.message_sender = MessageSender(self.event_queue, self.sending_queue, s)
             self.message_sender.start()
@@ -145,7 +145,7 @@ class ModelThread(threading.Thread):
         def connect_to_next_next_hop():
             ip, port = self.next_next_hop_info
             try:
-                s = socket.create_connection(('localhost', port))
+                s = socket.create_connection((ip, config.getint('NewPredecessorListener', 'Port')))
                 self.sending_queue = queue.Queue(maxsize=0)
                 self.message_sender = MessageSender(self.event_queue, self.sending_queue, s)
                 self.message_sender.start()
@@ -157,8 +157,9 @@ class ModelThread(threading.Thread):
                 print(e)
 
         ip, port = self.next_hop_info
+
         try:
-            s = socket.create_connection(('localhost', port))
+            s = socket.create_connection((ip, port))
             self.sending_queue = queue.Queue(maxsize=0)
             self.message_sender = MessageSender(self.event_queue, self.sending_queue, s)
             self.message_sender.start()
@@ -179,13 +180,10 @@ class ModelThread(threading.Thread):
 
         next_hop = self.next_hop_info if self.next_hop_info else (helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port'))
 
-        self.next_hop_info = event.data['address']
-
         response = events.NewClientResponseEvent(next_hop, self.next_next_hop_info, marked_spots)
-
-
         if self.next_hop_info:
             self.next_next_hop_info = self.next_hop_info
+        self.next_hop_info = event.data['address']
 
         message = helpers.event_to_message(response)
         event.data['connection'].send(message)
@@ -193,7 +191,7 @@ class ModelThread(threading.Thread):
         # If we do not have a nex_next hop info this means we are the first client so we set out next next hope as our addres
         if not self.next_next_hop_info:
             self.next_next_hop_info = (
-            helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port'))
+                helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port'))
 
         # In the final application all client will be listening for new clients and new predecessors on the same port
         # for testing purposes the ports must be different
@@ -202,9 +200,9 @@ class ModelThread(threading.Thread):
         if self.message_sender:
             self.message_sender.stop()
         self.sending_queue = queue.Queue(maxsize=0)
-
-        logger.info("Establishing connection to: {}".format(config.getint('NewPredecessorConnector', 'Port')))
-        connection = socket.create_connection(('localhost', config.getint('NewPredecessorConnector', 'Port')), 100)
+        ip, _ = self.next_hop_info
+        logger.info("Establishing connection to: {}".format(config.getint('NewPredecessorListener', 'Port')))
+        connection = socket.create_connection((ip, config.getint('NewPredecessorListener', 'Port')), 100)
         self.message_sender = MessageSender(self.event_queue, self.sending_queue, connection)
         self.message_sender.start()
         self.sending_queue.put(events.TokenPassEvent(self.last_token))

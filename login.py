@@ -25,8 +25,8 @@ if len(sys.argv) > 1 and sys.argv[1] == '0':
     start_new_group()
 else:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    logger.info('Connecting to: {}'.format(config_wrapper.config.getint('NewClientConnector', 'Port')))
-    s.connect(('localhost', config_wrapper.config.getint('NewClientConnector', 'Port')))
+    logger.info('Connecting to: {}'.format(config_wrapper.config.getint('NewClientListener', 'Port')))
+    s.connect(('192.168.56.128', config_wrapper.config.getint('NewClientListener', 'Port')))
     connect_to_existing_client(s)
 
 class LoginPanel(tk.Frame):
@@ -69,7 +69,7 @@ class LoginPanel(tk.Frame):
         else:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:
-                s.connect((self.ip_address.get(), config_wrapper.config.getint('NewClientConnector', 'Port')))
+                s.connect((self.ip_address.get(), config_wrapper.config.getint('NewClientListener', 'Port')))
                 connect_to_existing_client(s)
                 self.parent.destroy()
             except Exception as e:
