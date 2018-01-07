@@ -43,7 +43,6 @@ class ModelThread(threading.Thread):
             self.message_sender = None
             self.predecessor = None
             self.last_token = 0
-
         else:
             self.next_hop_info = init_data['next_hop']
             if not init_data['next_next_hop']:
@@ -55,7 +54,7 @@ class ModelThread(threading.Thread):
 
             self.predecessor = init_connection.getsockname()
             ip, port = init_data['next_hop']
-            logger.info(ip, port)
+            logger.info("Next hop info: {}".format(ip))
             # TODO change for ip address
             s = socket.create_connection((ip, config.getint('NewPredecessorListener', 'Port')))
             self.sending_queue = queue.Queue(maxsize=0)
@@ -68,14 +67,15 @@ class ModelThread(threading.Thread):
             init_connection.close()
 
         # We start a dummy message sender event which will create cummy messages to detect connection break
-        self.dummy_message_sender = DummyMessageSender(self.event_queue, self.uuid)
+        self.dummy_message_sender = DummyMessageSender(self.event_queue, helpers.get_self_ip_address())
         self.dummy_message_sender.start()
 
 
     def run(self):
         while not self._stop_event.is_set():
             (e) = self.event_queue.get()
-            print(type(e).__name__)
+            if not (type(e).__name__ == 'DummyMessageEvent' or type(e).__name__ == 'TokenPassEvent'):
+                print(e)
             handler_function = self.handlers[type(e).__name__]
             handler_function(e)
 
@@ -157,10 +157,9 @@ class ModelThread(threading.Thread):
         #   in case that the dead client was holding the token the moment he died
 
         ip, _ = self.next_next_hop_info
-        print("test", ip, self.next_next_hop_info)
-        print(ip == helpers.get_self_ip_address())
         # If we are the only client left we reset the data to the initial state
         if ip == helpers.get_self_ip_address():
+            self.critical_section = None
             self.next_hop_info = None
             self.next_next_hop_info = None
             if self.message_sender:
@@ -169,9 +168,10 @@ class ModelThread(threading.Thread):
             self.message_sender = None
             self.predecessor = None
             self.last_token = 0
+            self.paint_queue.put({'type': DrawingQueueEvent.BOARD_OPEN})
             return
 
-        def connect_to_next_next_hop():
+        def connect_to_next_next_hop(self):
             ip, port = self.next_next_hop_info
             try:
                 s = socket.create_connection((ip, config.getint('NewPredecessorListener', 'Port')))
@@ -192,7 +192,7 @@ class ModelThread(threading.Thread):
             self.message_sender = MessageSender(self.event_queue, self.sending_queue, s)
             self.message_sender.start()
         except ConnectionRefusedError as e:
-            connect_to_next_next_hop()
+            connect_to_next_next_hop(self)
 
     ############################################################################################
     #
@@ -210,8 +210,6 @@ class ModelThread(threading.Thread):
         # If we have next hop information we send it, if we do not have we are the first client so we send our
         # information as the first hop information
         next_hop = (helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port')) if first_client else self.next_hop_info
-        print("This next hop we send", next_hop)
-
 
         # If we are the first client next next hop is None
         response = events.NewClientResponseEvent(next_hop, self.next_next_hop_info, marked_spots)
@@ -248,6 +246,7 @@ class ModelThread(threading.Thread):
         ip, _ = self.next_hop_info
         logger.info("Establishing connection to: {} {}".format(ip, config.getint('NewPredecessorListener', 'Port')))
         # We establish a new connection and a new message sender
+        print("Next hop info", self.next_hop_info)
         connection = socket.create_connection((ip, config.getint('NewPredecessorListener', 'Port')), 100)
         self.sending_queue = queue.Queue(maxsize=0)
         self.message_sender = MessageSender(self.event_queue, self.sending_queue, connection)
@@ -314,7 +313,7 @@ class ModelThread(threading.Thread):
         if (data['client_uuid']) == self.uuid:
             return
 
-        if self.critical_section['client_uuid'] == event.data['client_uuid']:
+        if self.critical_section and self.critical_section['client_uuid'] == event.data['client_uuid']:
             self.paint_queue.put({'type': DrawingQueueEvent.BOARD_OPEN})
             self.critical_section = None
 
@@ -340,17 +339,22 @@ class ModelThread(threading.Thread):
             self.paint_queue.put({'type': DrawingQueueEvent.BOARD_CONTROLLED})
             self.sending_queue.put(events.EnteredCriticalSectionEvent(timestamp, self.uuid))
         else:
-            self.sending_queue.put(events.TokenPassEvent(token))
+            if self.sending_queue:
+                self.sending_queue.put(events.TokenPassEvent(token))
 
     def handle_new_next_next_hop_event(self, event):
         # We are the recipient of the message
-        # print(self.next_next_hop_info, event.data['destination_next_hop'])
+        print(event.data)
+        print(self.next_hop_info)
         post_destination_ip, _ = event.data['destination_next_hop']
         next_hop_ip, _ = self.next_hop_info
+        print(post_destination_ip, next_hop_ip)
         if post_destination_ip == next_hop_ip:
             self.next_next_hop_info = event.data['new_address']
         else:
             self.sending_queue.put(event)
+
+        print(self.next_next_hop_info)
 
     def handle_token_received_question_event(self, event):
         # We check weather the last token we received is greater than
@@ -360,18 +364,19 @@ class ModelThread(threading.Thread):
 
 
         print("HANDLE TOKEN RECEIVED QUESTION")
-        print(event)
+        print(event.data)
         print(self.last_token)
         print("60"*50)
         if self.last_token > event.data['token'] + 1:
             return
         else:
             self.critical_section = None
+            self.paint_queue.put({'type': DrawingQueueEvent.BOARD_OPEN})
             self.sending_queue.put(events.TokenPassEvent(event.data['token'] + 1))
 
     def handle_dummy_message_event(self, event):
-        if self.uuid != event.data['uuid']:
+        if helpers.get_self_ip_address() != event.data['ip']:
             return
         else:
             if self.sending_queue:
-                self.sending_queue.put(events.DummyMessageEvent(event.data['uuid']))
+                self.sending_queue.put(event)

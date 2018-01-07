@@ -120,10 +120,10 @@ class TokenReceivedQuestionEvent(Event):
         self.event_type = EventType.TOKEN_RECEIVED_QUESTION
 
 class DummyMessageEvent(Event):
-    def __init__(self, uuid):
+    def __init__(self, ip):
         Event.__init__(self)
         self.data = {
-            'uuid': uuid
+            'ip': ip
         }
         self.event_type = EventType.DUMMY_MESSAGE
 
