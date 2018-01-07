@@ -11,6 +11,7 @@ class EventType(Enum):
     TOKEN_PASS = 8
     SET_NEW_NEXT_NEXT_HOP = 9
     TOKEN_RECEIVED_QUESTION = 10
+    DUMMY_MESSAGE = 11
 
 
 class InnerEventType(Enum):
@@ -116,8 +117,15 @@ class TokenReceivedQuestionEvent(Event):
         self.data = {
             'token': token
         }
-
         self.event_type = EventType.TOKEN_RECEIVED_QUESTION
+
+class DummyMessageEvent(Event):
+    def __init__(self, uuid):
+        Event.__init__(self)
+        self.data = {
+            'uuid': uuid
+        }
+        self.event_type = EventType.DUMMY_MESSAGE
 
 
 #####################################################################################
