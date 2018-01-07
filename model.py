@@ -329,7 +329,9 @@ class ModelThread(threading.Thread):
 
         if self.critical_section:
             # If we have received the token and the critical section exists we unvalidate critical secion info
-            self.critical_section == None
+            self.critical_section = None
+            self.paint_queue.put({'type': DrawingQueueEvent.BOARD_OPEN})
+
 
         if self.want_to_enter_critical_section:
             timestamp = helpers.get_current_timestamp()
@@ -353,6 +355,7 @@ class ModelThread(threading.Thread):
         post_destination_ip, _ = event.data['destination_next_hop']
         next_hop_ip, _ = self.next_hop_info
         print(post_destination_ip, next_hop_ip)
+        print(post_destination_ip == next_hop_ip)
         if post_destination_ip == next_hop_ip:
             self.next_next_hop_info = event.data['new_address']
         else:
