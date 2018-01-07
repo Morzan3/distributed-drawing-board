@@ -56,4 +56,5 @@ class PredecessorListener(threading.Thread):
         elif message_type == EventType.LEAVING_CRITICAL_SECTION:
             self.event_queue.put(LeavingCriticalSectionEvent(data['timestamp'], data['client_uuid']))
         else:
+            print(parsed_message)
             raise Exception("Not implemented yet")

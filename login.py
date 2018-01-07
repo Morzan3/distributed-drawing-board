@@ -25,6 +25,7 @@ if len(sys.argv) > 1 and sys.argv[1] == '0':
     start_new_group()
 else:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    logger.info('Connecting to: {}'.format(config_wrapper.config.getint('NewClientConnector', 'Port')))
     s.connect(('localhost', config_wrapper.config.getint('NewClientConnector', 'Port')))
     connect_to_existing_client(s)
 
@@ -78,10 +79,3 @@ class LoginPanel(tk.Frame):
     def start_new_group(self):
         start_new_group()
         self.parent.destroy()
-
-
-# if __name__ == "__main__":
-    # root = tk.Tk()
-    # root.eval('tk::PlaceWindow %s center' % root.winfo_pathname(root.winfo_id()))
-    # panel = LoginPanel(root)
-

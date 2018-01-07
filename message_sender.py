@@ -24,7 +24,6 @@ class MessageSender(threading.Thread):
         while not self._stop_event.is_set():
             (e) = self.message_queue.get()
             try:
-                print(e)
                 message = helpers.event_to_message(e)
                 message_size = (len(message)).to_bytes(8, byteorder='big')
                 self.connection.send(message_size)

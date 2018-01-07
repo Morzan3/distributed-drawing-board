@@ -17,8 +17,6 @@ class DrawingQueueEvent(Enum):
     BOARD_OPEN = 3
     BOARD_CONTROLLED = 4
 
-
-
 class Painter:
     # Tracks whether left mouse is down
     left_but = "up"
