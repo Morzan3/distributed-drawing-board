@@ -95,7 +95,7 @@ class Painter:
                         self.y_pos = y
 
                     # self.drawing_area.create_line(self.x_pos, self.y_pos, data['x'], data['y'], fill=color)
-                    self.drawing_area.create_rectangle((x, y)*2, )
+                    self.drawing_area.create_rectangle((x, y)*2, outline=color)
                     self.x_pos = x
                     self.y_pos = y
                 elif e['type'] == DrawingQueueEvent.BOARD_CLOSED:

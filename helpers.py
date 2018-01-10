@@ -5,7 +5,7 @@ time_offset = None
 
 def initialize_offset(offset):
     global time_offset
-    time_offset=offset
+    time_offset = offset
 
 def get_current_timestamp():
     epoch_time = int(time.time())

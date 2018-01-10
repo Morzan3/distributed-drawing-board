@@ -52,14 +52,6 @@ class NewPredecessorRequestEvent(Event):
         self.data = data
         self.event_type = EventType.NEW_PREDECESSOR_REQUEST
 
-
-class PredecessorMessageEvent(Event):
-    def __init__(self, data):
-        Event.__init__(self)
-        self.data = data
-        self.event_type = EventType.PREDECESSOR_MESSAGE
-
-
 class DrawingInformationEvent(Event):
     def __init__(self, client_uuid, timestamp, x, y, color, begin):
         Event.__init__(self)

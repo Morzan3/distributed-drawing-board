@@ -5,7 +5,6 @@ import events
 logger = logging.getLogger(__name__)
 # This is thread responsible for listening for predecessor
 
-
 class PredecessorListener(threading.Thread):
     def __init__(self, event_queue, connection_data):
         super(PredecessorListener, self).__init__()
@@ -31,14 +30,13 @@ class PredecessorListener(threading.Thread):
                         return None
                     message += packet
 
-
-                parsed_message = (json.loads(message.decode('utf-8')))
+                parsed_message = json.loads(message.decode('utf-8'))
                 self.handle_message(parsed_message)
             except Exception as ex:
-                if(message == b''):
+                if message == b'':
                     # Only case when we have a succesfull read of 0 bytes is when other socket shutdowns normally
                     return
-                print(message)
+                logger.error(ex)
                 raise ex
 
     def handle_message(self, parsed_message):
@@ -62,5 +60,5 @@ class PredecessorListener(threading.Thread):
         elif message_type == events.EventType.DUMMY_MESSAGE:
             self.event_queue.put(events.DummyMessageEvent(data['ip']))
         else:
-            print(parsed_message)
+            logger.error(parsed_message)
             raise Exception("Not implemented yet")
