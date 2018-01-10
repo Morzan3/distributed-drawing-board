@@ -17,7 +17,6 @@ def connect_to_existing_client(connection):
     main_queue = queue.Queue(maxsize=0)
     paint_queue = queue.Queue(maxsize=0)
 
-
     # Retrieving time from a ntp server thread
     time_offset = [0]
     helpers.initialize_offset(time_offset)
@@ -32,7 +31,7 @@ def connect_to_existing_client(connection):
     new_predecessor_listener = NewPredecessorListener(main_queue)
     new_predecessor_listener.start()
 
-    message_size = connection['connection'].recv(8)
+    message_size = connection.recv(8)
     message_size = int.from_bytes(message_size, byteorder='big')
     data = connection.recv(message_size)
 

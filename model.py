@@ -93,6 +93,7 @@ class ModelThread(threading.Thread):
     def initialize_handlers(self):
         # Inner Handlers
         self.handlers['InnerNewClientRequestEvent'] = self.handle_new_client_request
+        self.handlers['InnerNewPredecessorRequestEvent'] = self.handle_new_predecessor_request_event
         self.handlers['InnerDrawingInformationEvent'] = self.handle_inner_draw_information_event
         self.handlers['InnerWantToEnterCriticalSection'] = self.inner_handle_want_to_enter_critical_section_event
         self.handlers['InnerLeavingCriticalSection'] = self.inner_leaving_critical_section_event
@@ -100,7 +101,6 @@ class ModelThread(threading.Thread):
 
         # Outter handlers
         self.handlers['DrawingInformationEvent'] = self.handle_drawing_information_event
-        self.handlers['NewPredecessorRequestEvent'] = self.handle_new_predecessor_request_event
         self.handlers['EnteredCriticalSectionEvent'] = self.handle_entering_critical_section
         self.handlers['LeavingCriticalSectionEvent'] = self.handle_leaving_critical_section
         self.handlers['TokenPassEvent'] = self.handle_token_pass_event
@@ -224,7 +224,7 @@ class ModelThread(threading.Thread):
         try:
             message = event.data['connection'].recv(8)
         except Exception as ex:
-            if (message == b''):
+            if message == b'':
                 # Only case when we have a succesfull read of 0 bytes is when other socket shutdowns normally
                 pass
             else:
@@ -236,14 +236,13 @@ class ModelThread(threading.Thread):
         if not first_client:
             self.next_next_hop_info = self.next_hop_info
         else:
-        # If we are the first client we update our next next hop info to self address
+            # If we are the first client we update our next next hop info to self address
             self.next_next_hop_info = (
                 helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port')
             )
 
         # Then we update our next hop info with the newest client request
         self.next_hop_info = event.data['address']
-
 
         # We stop current message sender if it exists
         if self.message_sender:
@@ -276,7 +275,7 @@ class ModelThread(threading.Thread):
             if self.sending_queue:
                 self.sending_queue.put(event)
 
-        if (event.data['client_uuid'] == self.uuid):
+        if event.data['client_uuid'] == self.uuid:
             return
         if not self.critical_section:
             draw_point(event)
@@ -287,7 +286,6 @@ class ModelThread(threading.Thread):
         elif self.critical_section['client_uuid'] != event.data['client_uuid']:
             pass
 
-
     def handle_new_predecessor_request_event(self, event):
         # The moment we have a new predecessor this means that the client before our predecessor
         # has a new next next hop address (which is our address)
@@ -295,10 +293,10 @@ class ModelThread(threading.Thread):
         self_address = (helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port'))
         # Special case if we have only 2 nodes left
         if self.predecessor[0] == self.next_hop_info[0]:
-          self.sending_queue.put(events.NewNextNextHop(self.predecessor, self_address))
+            self.sending_queue.put(events.NewNextNextHop(self.predecessor, self_address))
         else:
-        # We send information to predecessor of our predecessor about his new next next hop address
-          self.sending_queue.put(events.NewNextNextHop(self_address, self.predecessor))
+            # We send information to predecessor of our predecessor about his new next next hop address
+            self.sending_queue.put(events.NewNextNextHop(self_address, self.predecessor))
 
     def handle_entering_critical_section(self, event):
         data = event.data
@@ -330,7 +328,6 @@ class ModelThread(threading.Thread):
             # If we have received the token and the critical section exists we unvalidate critical secion info
             self.critical_section = None
             self.paint_queue.put({'type': DrawingQueueEvent.BOARD_OPEN})
-
 
         if self.want_to_enter_critical_section:
             timestamp = helpers.get_current_timestamp()

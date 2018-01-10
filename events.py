@@ -2,39 +2,23 @@ from enum import Enum
 
 
 class EventType(Enum):
-    NEW_CLIENT_RESPONSE = 2
-    NEW_PREDECESSOR_REQUEST = 3
-    PREDECESSOR_MESSAGE = 4
-    DRAWING_INFORMATION = 5
-    ENTERED_CRITICAL_SECTION = 6
-    LEAVING_CRITICAL_SECTION = 7
-    TOKEN_PASS = 8
-    SET_NEW_NEXT_NEXT_HOP = 9
-    TOKEN_RECEIVED_QUESTION = 10
-    DUMMY_MESSAGE = 11
-
-
-class InnerEventType(Enum):
-    DRAWING_INFORMATION = 100
-    WANT_TO_ENTER_CRITICAL_SECTION = 101
-    LEAVING_CRITICAL_SECTION = 102
-    NEXT_HOP_BROKEN = 103
-    NEW_CLIENT_REQUEST = 104
-
+    NEW_CLIENT_RESPONSE = 1
+    NEW_PREDECESSOR_REQUEST = 2
+    PREDECESSOR_MESSAGE = 3
+    DRAWING_INFORMATION = 4
+    ENTERED_CRITICAL_SECTION = 5
+    LEAVING_CRITICAL_SECTION = 6
+    TOKEN_PASS = 7
+    SET_NEW_NEXT_NEXT_HOP = 8
+    TOKEN_RECEIVED_QUESTION = 9
+    DUMMY_MESSAGE = 10
 
 class Event:
     def __init__(self):
         pass
 
-class InnerNewClientRequestEvent(Event):
-    def __init__(self, connection, address):
-        Event.__init__(self)
-        self.data = {
-            'connection': connection,
-            'address': address
-        }
-        self.event_type = EventType.NEW_CLIENT_REQUEST
 
+# Response when a new client is connecting containing the initial board state and next hops information
 class NewClientResponseEvent(Event):
     def __init__(self, next_hop, next_next_hop, board_state):
         Event.__init__(self)
@@ -46,12 +30,7 @@ class NewClientResponseEvent(Event):
         self.event_type = EventType.NEW_CLIENT_RESPONSE
 
 
-class NewPredecessorRequestEvent(Event):
-    def __init__(self, data):
-        Event.__init__(self)
-        self.data = data
-        self.event_type = EventType.NEW_PREDECESSOR_REQUEST
-
+# Event containing drawing information
 class DrawingInformationEvent(Event):
     def __init__(self, client_uuid, timestamp, x, y, color, begin):
         Event.__init__(self)
@@ -65,6 +44,8 @@ class DrawingInformationEvent(Event):
         }
         self.event_type = EventType.DRAWING_INFORMATION
 
+
+# Event informing other clients that someone has entered critical section
 class EnteredCriticalSectionEvent(Event):
     def __init__(self, timestamp, client_uuid):
         Event.__init__(self)
@@ -74,6 +55,8 @@ class EnteredCriticalSectionEvent(Event):
         }
         self.event_type = EventType.ENTERED_CRITICAL_SECTION
 
+
+# Event informing other clients about leaving critical sections
 class LeavingCriticalSectionEvent(Event):
     def __init__(self, timestamp, client_uuid):
         Event.__init__(self)
@@ -83,6 +66,7 @@ class LeavingCriticalSectionEvent(Event):
         }
         self.event_type = EventType.LEAVING_CRITICAL_SECTION
 
+# Event of token passing between the clients
 class TokenPassEvent(Event):
     def __init__(self, token):
         Event.__init__(self)
@@ -103,6 +87,7 @@ class NewNextNextHop(Event):
         self.event_type = EventType.SET_NEW_NEXT_NEXT_HOP
 
 
+# Event asking a client weather he received a specific token or not
 class TokenReceivedQuestionEvent(Event):
     def __init__(self, token):
         Event.__init__(self)
@@ -111,6 +96,8 @@ class TokenReceivedQuestionEvent(Event):
         }
         self.event_type = EventType.TOKEN_RECEIVED_QUESTION
 
+
+# Dummy message event used for testing the connection
 class DummyMessageEvent(Event):
     def __init__(self, ip):
         Event.__init__(self)
@@ -124,6 +111,8 @@ class DummyMessageEvent(Event):
 #                                  Inner events
 #####################################################################################
 
+# Inner events are passed withing specific client and not send outside
+
 class InnerNewClientRequestEvent(Event):
     def __init__(self, connection, address):
         Event.__init__(self)
@@ -131,7 +120,12 @@ class InnerNewClientRequestEvent(Event):
             'connection': connection,
             'address': address
         }
-        self.event_type = InnerEventType.NEW_CLIENT_REQUEST
+
+# Event when a new client is connecting to the predecessor listener socket
+class InnerNewPredecessorRequestEvent(Event):
+    def __init__(self, data):
+        Event.__init__(self)
+        self.data = data
 
 class InnerDrawingInformationEvent(Event):
     def __init__(self, timestamp, x, y, color, begin):
@@ -144,19 +138,15 @@ class InnerDrawingInformationEvent(Event):
             'begin': begin,
             'timestamp': timestamp
         }
-        self.event_type = InnerEventType.DRAWING_INFORMATION
 
 class InnerWantToEnterCriticalSection(Event):
     def __init__(self):
         Event.__init__(self)
-        self.event_type = InnerEventType.WANT_TO_ENTER_CRITICAL_SECTION
 
 class InnerLeavingCriticalSection(Event):
     def __init__(self):
         Event.__init__(self)
-        self.event_type = InnerEventType.LEAVING_CRITICAL_SECTION
 
 class InnerNextHopBroken(Event):
     def __init__(self):
         Event.__init__(self)
-        self.event_type = InnerEventType.NEXT_HOP_BROKEN

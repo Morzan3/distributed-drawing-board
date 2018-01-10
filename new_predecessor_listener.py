@@ -1,5 +1,5 @@
 import socket
-from events import NewPredecessorRequestEvent
+from events import InnerNewPredecessorRequestEvent
 from predecessor_listener import PredecessorListener
 import threading
 import logging
@@ -37,7 +37,7 @@ class NewPredecessorListener(threading.Thread):
             if self.predecessor_listening_thread:
                 self.predecessor_listening_thread.stop()
             self.predecessor_data = {'connection': connection, 'client_address': client_address}
-            self.event_queue.put(NewPredecessorRequestEvent(self.predecessor_data))
+            self.event_queue.put(InnerNewPredecessorRequestEvent(self.predecessor_data))
             self.predecessor_listening_thread = PredecessorListener(self.event_queue, self.predecessor_data)
             self.predecessor_listening_thread.start()
 
