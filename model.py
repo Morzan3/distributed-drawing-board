@@ -213,18 +213,19 @@ class ModelThread(threading.Thread):
         # 2.Connect to him as a predecessor
 
         # Gather the initial board state
-        marked_spots2 = [(x, y) for x in range(len(self.board_state)) for y in range(len(self.board_state[x])) if self.board_state[x][y]]
+        marked_spots = [(x, y) for x in range(len(self.board_state)) for y in range(len(self.board_state[x])) if self.board_state[x][y]]
 
         # If we have next hop information we send it, if we do not have we are the first client so we send our
         # information as the first hop information
         next_hop = (helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port')) if first_client else self.next_hop_info
-        print("****"*50)
-        logger.info(self.next_hop_info)
-        logger.info('Next Hop we send {}'.format(next_hop))
-        marked_spots = []
         # If we are the first client next next hop is None
         response = events.NewClientResponseEvent(next_hop, self.next_next_hop_info, marked_spots)
         message = helpers.event_to_message(response)
+        message_size = (len(message))
+        print(message_size)
+        message_size = message_size.to_bytes(8, byteorder='big')
+        print(message_size)
+        event.data['connection'].send(message_size)
         event.data['connection'].send(message)
 
 
@@ -262,9 +263,9 @@ class ModelThread(threading.Thread):
         self.sending_queue = queue.Queue(maxsize=0)
         self.message_sender = MessageSender(self.event_queue, self.sending_queue, connection)
         self.message_sender.start()
-        for spot in marked_spots2:
-          x, y = spot
-          self.sending_queue.put(events.DrawingInformationEvent(self.uuid, helpers.get_current_timestamp(), x, y, 1, False))
+        # for spot in marked_spots2:
+        #   x, y = spot
+        #   self.sending_queue.put(events.DrawingInformationEvent(self.uuid, helpers.get_current_timestamp(), x, y, 1, False))
         # If this is the first client we start the token pass
         if first_client:
             self.sending_queue.put(events.TokenPassEvent(self.last_token))
@@ -387,11 +388,6 @@ class ModelThread(threading.Thread):
         # If it is, this means that the disconnected client was not in posession of the token when he disconnected
         # If it was we have to unvalidate critial secion information and send token further
 
-
-        # print("HANDLE TOKEN RECEIVED QUESTION")
-        # print(event.data)
-        # print(self.last_token)
-        # print("60"*50)
         if self.last_token > event.data['token'] + 1:
             return
         else:

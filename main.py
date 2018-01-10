@@ -32,8 +32,9 @@ def connect_to_existing_client(connection):
     new_predecessor_listener = NewPredecessorListener(main_queue)
     new_predecessor_listener.start()
 
-
-    data = connection.recv(1048576)
+    message_size = connection['connection'].recv(8)
+    message_size = int.from_bytes(message_size, byteorder='big')
+    data = connection.recv(message_size)
 
     init_data = (json.loads(data.decode('utf-8')))['data']
     model = ModelThread(main_queue, paint_queue, time_offset, init_data, connection)

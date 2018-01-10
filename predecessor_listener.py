@@ -23,7 +23,15 @@ class PredecessorListener(threading.Thread):
             try:
                 message_size = self.connection_data['connection'].recv(8)
                 message_size = int.from_bytes(message_size, byteorder='big')
-                message = self.connection_data['connection'].recv(message_size)
+
+                message = b''
+                while len(message) < message_size:
+                    packet = self.connection_data['connection'].recv(message_size - len(message))
+                    if not packet:
+                        return None
+                    message += packet
+
+
                 parsed_message = (json.loads(message.decode('utf-8')))
                 self.handle_message(parsed_message)
             except Exception as ex:
