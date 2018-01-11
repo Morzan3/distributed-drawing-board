@@ -288,7 +288,8 @@ class ModelThread(threading.Thread):
 
     def handle_new_predecessor_request_event(self, event):
         # The moment we have a new predecessor this means that the client before our predecessor
-        # has a new next next hop address (which is our address)
+        # has a new next next hop address (which is our address) and our predecessor has new next next hop (which is
+        # our next hop)
         self.predecessor = event.data['client_address']
         self_address = (helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port'))
         # Special case if we have only 2 nodes left
@@ -297,6 +298,8 @@ class ModelThread(threading.Thread):
         else:
             # We send information to predecessor of our predecessor about his new next next hop address
             self.sending_queue.put(events.NewNextNextHop(self_address, self.predecessor))
+            # We send information to our predecessor about his new next next hop
+            self.sending_queue.put(events.NewNextNextHop(self.next_hop_info, self_address))
 
     def handle_entering_critical_section(self, event):
         data = event.data
