@@ -39,7 +39,7 @@ def connect_to_existing_client(connection):
         packet = connection.recv(message_size - len(data))
         if not packet:
             return None
-            data += packet
+        data += packet
 
     init_data = (json.loads(data.decode('utf-8')))['data']
     model = ModelThread(main_queue, paint_queue, time_offset, init_data, connection)

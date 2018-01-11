@@ -41,6 +41,7 @@ class ModelThread(threading.Thread):
         self.board_state = [[0 for _ in range(config.getint('Tkinter', 'CanvasX'))] for _ in range(config.getint('Tkinter', 'CanvasY'))]
 
         # If we are the first client
+        print(init_data)
         if not init_data:
             self.next_hop_info = None
             self.next_next_hop_info = None
@@ -89,6 +90,10 @@ class ModelThread(threading.Thread):
             x, y = board_state[counter]
             begin = True if counter == 0 else False
             self.paint_queue.put({'type': DrawingQueueEvent.DRAWING, 'data': (x, y, 1, begin)})
+            try:
+                self.board_state[x][y] = 1
+            except IndexError:
+                return
 
     def initialize_handlers(self):
         # Inner Handlers
@@ -254,7 +259,7 @@ class ModelThread(threading.Thread):
         self.sending_queue = queue.Queue(maxsize=0)
         self.message_sender = MessageSender(self.event_queue, self.sending_queue, connection)
         self.message_sender.start()
-        if first_client:
+        if first_client and self.last_token != None:
             # If we are the first client we start passing of the token
             self.sending_queue.put(events.TokenPassEvent(self.last_token))
 
@@ -270,7 +275,6 @@ class ModelThread(threading.Thread):
             except IndexError:
                 return
 
-            self.board_state[x][y] = color
             self.paint_queue.put({'type': DrawingQueueEvent.DRAWING, 'data': (x, y, color, begin)})
             if self.sending_queue:
                 self.sending_queue.put(event)
@@ -295,6 +299,7 @@ class ModelThread(threading.Thread):
         # Special case if we have only 2 nodes left
         if self.predecessor[0] == self.next_hop_info[0]:
             self.sending_queue.put(events.NewNextNextHop(self.predecessor, self_address))
+            self.next_next_hop_info = (helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port'))
         else:
             # We send information to predecessor of our predecessor about his new next next hop address
             self.sending_queue.put(events.NewNextNextHop(self_address, self.predecessor))
@@ -368,7 +373,8 @@ class ModelThread(threading.Thread):
         else:
             self.critical_section = None
             self.paint_queue.put({'type': DrawingQueueEvent.BOARD_OPEN})
-            self.sending_queue.put(events.TokenPassEvent(event.data['token'] + 1))
+            token = event.data['token'] + 1 if event.data['token'] else self.last_token + 1
+            self.sending_queue.put(events.TokenPassEvent(token))
 
     def handle_dummy_message_event(self, event):
         if helpers.get_self_ip_address() != event.data['ip']:
