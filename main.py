@@ -33,7 +33,13 @@ def connect_to_existing_client(connection):
 
     message_size = connection.recv(8)
     message_size = int.from_bytes(message_size, byteorder='big')
-    data = connection.recv(message_size)
+
+    data = b''
+    while len(data) < message_size:
+        packet = connection.recv(message_size - len(data))
+        if not packet:
+            return None
+            data += packet
 
     init_data = (json.loads(data.decode('utf-8')))['data']
     model = ModelThread(main_queue, paint_queue, time_offset, init_data, connection)
