@@ -41,7 +41,6 @@ class ModelThread(threading.Thread):
         self.board_state = [[0 for _ in range(config.getint('Tkinter', 'CanvasX'))] for _ in range(config.getint('Tkinter', 'CanvasY'))]
 
         # If we are the first client
-        print(init_data)
         if not init_data:
             self.next_hop_info = None
             self.next_next_hop_info = None
