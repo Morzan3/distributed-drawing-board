@@ -1,15 +1,16 @@
 import threading
 import logging
 import uuid
-from config_wrapper import config
 import events
 import queue
 import helpers
 import socket
+from config_wrapper import config
 from critical_section_leaver import CriticalSectionLeaver
 from painter import DrawingQueueEvent
 from message_sender import MessageSender
 from dummy_message_sender import DummyMessageSender
+import json
 
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,7 @@ class ModelThread(threading.Thread):
             self.predecessor = None
             self.last_token = 0
         else:
+            print(init_data)
             self.next_hop_info = init_data['next_hop']
             if not init_data['next_next_hop']:
                 # If there is no next_next_hop init data in the response we are the second client so we set
@@ -63,7 +65,7 @@ class ModelThread(threading.Thread):
 
             # We initialize connection to our next hop and we start sending queue
             ip, port = init_data['next_hop']
-            s = socket.create_connection((ip, config.getint('NewPredecessorListener', 'Port')))
+            s = socket.create_connection((ip, port))
             self.sending_queue = queue.Queue(maxsize=0)
             self.message_sender = MessageSender(self.event_queue, self.sending_queue, s)
             self.message_sender.start()
@@ -181,7 +183,7 @@ class ModelThread(threading.Thread):
         def connect_to_next_next_hop(self):
             ip, port = self.next_next_hop_info
             try:
-                s = socket.create_connection((ip, config.getint('NewPredecessorListener', 'Port')))
+                s = socket.create_connection((ip, port))
                 self.sending_queue = queue.Queue(maxsize=0)
                 self.message_sender = MessageSender(self.event_queue, self.sending_queue, s)
                 self.message_sender.start()
@@ -207,6 +209,17 @@ class ModelThread(threading.Thread):
     #                                      Event handlers
     ############################################################################################
     def handle_new_client_request(self, event):
+        # At first we want to receive information to properly connect as new predecessor after sending init_data
+        message_size =  event.data['connection'].recv(8)
+        message_size = int.from_bytes(message_size, byteorder='big')
+        message = b''
+        while len(message) < message_size:
+            packet =  event.data['connection'].recv(message_size - len(message))
+            if not packet:
+                return None
+            message += packet
+        client_request = json.loads(message.decode('utf-8'))
+
         first_client = not self.next_hop_info
         # When we detect a new client connecting we want to;
         # 1.Send him the initial data over the connection we already established
@@ -224,6 +237,8 @@ class ModelThread(threading.Thread):
         message_size = (len(message)).to_bytes(8, byteorder='big')
         event.data['connection'].send(message_size)
         event.data['connection'].send(message)
+
+
 
         try:
             message = event.data['connection'].recv(8)
@@ -245,16 +260,16 @@ class ModelThread(threading.Thread):
                 helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port')
             )
 
-        # Then we update our next hop info with the newest client request
-        self.next_hop_info = event.data['address']
-
         # We stop current message sender if it exists
         if self.message_sender:
             self.message_sender.stop()
 
-        ip, _ = self.next_hop_info
+
+        # We update our next hop info with the newest client request
+        self.next_hop_info = client_request['data']['address']
+        ip, port = self.next_hop_info
         # We establish a new connection and a new message sender
-        connection = socket.create_connection((ip, config.getint('NewPredecessorListener', 'Port')), 100)
+        connection = socket.create_connection((ip, port), 100)
         self.sending_queue = queue.Queue(maxsize=0)
         self.message_sender = MessageSender(self.event_queue, self.sending_queue, connection)
         self.message_sender.start()

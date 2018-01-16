@@ -12,6 +12,7 @@ class EventType(Enum):
     SET_NEW_NEXT_NEXT_HOP = 8
     TOKEN_RECEIVED_QUESTION = 9
     DUMMY_MESSAGE = 10
+    NEW_CLIENT_REQUEST = 11
 
 class Event:
     def __init__(self):
@@ -105,6 +106,14 @@ class DummyMessageEvent(Event):
             'ip': ip
         }
         self.event_type = EventType.DUMMY_MESSAGE
+
+class NewClientRequestEvent(Event):
+    def __init__(self, address):
+        Event.__init__(self)
+        self.data = {
+            'address': address
+        }
+        self.event_type = EventType.NEW_CLIENT_REQUEST
 
 
 #####################################################################################
