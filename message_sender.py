@@ -29,7 +29,5 @@ class MessageSender(threading.Thread):
                 self.connection.send(message_size)
                 self.connection.send(message)
             except Exception as e:
-                print(e)
-                print("****"*100)
                 self.event_queue.put(InnerNextHopBroken())
                 return

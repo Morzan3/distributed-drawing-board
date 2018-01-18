@@ -16,7 +16,6 @@ class DummyMessageSender(threading.Thread):
     def run(self):
         while True:
             if self.event_queue.empty():
-                print("cReating dummy message")
                 self.event_queue.put(DummyMessageEvent(self.uuid))
                 time.sleep(0.2)
 

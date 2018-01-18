@@ -39,7 +39,6 @@ class PredecessorListener(threading.Thread):
                 parsed_message = json.loads(message.decode('utf-8'))
                 self.handle_message(parsed_message)
             except Exception as ex:
-                print("####"*100)
                 if message == b'':
                     # Only case when we have a succesfull read of 0 bytes is when other socket shutdowns normally
                     return

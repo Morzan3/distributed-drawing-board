@@ -126,7 +126,6 @@ class ModelThread(threading.Thread):
                   x,y = point
                   self.board_state[x][y] = color
             except IndexError as e:
-                print(e)
                 return
 
             self.paint_queue.put({'type': DrawingQueueEvent.DRAWING, 'data': (points, color)})
@@ -163,9 +162,7 @@ class ModelThread(threading.Thread):
         # 2.If reconnect fails we want to connect to our next next hop
         # 3.When we succesfully connect to our next next hop we want to send recovery token question
         #   in case that the dead client was holding the token the moment he died
-        print("****"*100)
         ip, port = self.next_next_hop_info
-        print(self.next_next_hop_info)
         # If we are the only client left we reset the data to the initial state
         if ip == helpers.get_self_ip_address():
             self.critical_section = None
@@ -236,18 +233,13 @@ class ModelThread(threading.Thread):
         message = helpers.event_to_message(response)
         message_size = (len(message)).to_bytes(8, byteorder='big')
         event.data['connection'].send(message_size)
-        print(message)
         event.data['connection'].send(message)
 
 
-        print("WAITING FOR SHUTDOWN")
         try:
             message = event.data['connection'].recv(8)
         except Exception as ex:
-            print(ex)
-            print(message)
             if message == b'':
-                print("SHUUTDOWN")
                 # Only case when we have a succesfull read of 0 bytes is when other socket shutdowns normally
                 pass
             else:
@@ -370,7 +362,6 @@ class ModelThread(threading.Thread):
                 self.sending_queue.put(events.TokenPassEvent(token))
 
     def handle_new_next_next_hop_event(self, event):
-        # print('NEW next next HOP')
         post_destination_ip, _ = event.data['destination_next_hop']
         next_hop_ip, _ = self.next_hop_info
 
@@ -378,7 +369,6 @@ class ModelThread(threading.Thread):
         if post_destination_ip == next_hop_ip:
             self.next_next_hop_info = event.data['new_address']
         else:
-            # print("###"*80)
             self.sending_queue.put(event)
 
     def handle_token_received_question_event(self, event):
