@@ -31,7 +31,6 @@ class Painter:
 
     def left_but_down(self, event=None):
         self.left_but = "down"
-        self.begin_draw = True
         # Set x & y when mouse is clicked
         self.x1_line_pt = event.x
         self.y1_line_pt = event.y
@@ -48,13 +47,16 @@ class Painter:
         self.y2_line_pt = event.y
 
     def motion(self, event=None):
-        if event is not None and self.left_but == 'down':
-            # Make sure x and y have a value
-            # if self.x_pos is not None and self.y_pos is not None:
-            color = 0 if self.drawing_color == 'white' else 1
-
-            self.master_queue.put(InnerDrawingInformationEvent(helpers.get_current_timestamp(), event.x, event.y, color, self.begin_draw))
-            self.begin_draw = False
+      if event is not None and self.left_but == 'down':
+          # Make sure x and y have a value
+          # if self.x_pos is not None and self.y_pos is not None:
+          color = 0 if self.drawing_color == 'white' else 1
+          if self.x_pos is not None and self.y_pos is not None:
+            points = self.line(self.x_pos, self.y_pos, event.x, event.y)
+            self.master_queue.put(InnerDrawingInformationEvent(helpers.get_current_timestamp(), points, color))
+          
+          self.x_pos = event.x
+          self.y_pos = event.y
 
     def __init__(self, paint_queue, master_queue):
         self.master = tkinter.Tk()
@@ -75,7 +77,6 @@ class Painter:
         self.drawing_area.bind("<ButtonRelease-1>", self.left_but_up)
         self.running = True
         self.drawing_color = 'black'
-        self.begin_draw = False
         self.critical_section_string.set('Board Open')
 
     def start_drawing(self):
@@ -84,20 +85,14 @@ class Painter:
             while not self.paint_queue.empty():
                 e = self.paint_queue.get()
                 if e['type'] == DrawingQueueEvent.DRAWING:
-                    x, y, color, begin = e['data']
+                    points, color = e['data']
                     color = 'white' if color == 0 else 'black'
-                    if (not self.x_pos and not self.y_pos):
-                        self.x_pos = x
-                        self.y_pos = y
 
-                    if begin:
-                        self.x_pos = x
-                        self.y_pos = y
 
+                    for point in points: 
                     # self.drawing_area.create_line(self.x_pos, self.y_pos, data['x'], data['y'], fill=color)
-                    self.drawing_area.create_rectangle((x, y)*2, outline=color)
-                    self.x_pos = x
-                    self.y_pos = y
+                      x, y = point
+                      self.drawing_area.create_rectangle((x, y)*2, outline=color)
                 elif e['type'] == DrawingQueueEvent.BOARD_CLOSED:
                     self.critical_section_string.set("Board closed")
                 elif e['type'] == DrawingQueueEvent.BOARD_OPEN:
@@ -121,3 +116,32 @@ class Painter:
 
     def want_to_enter_critial_section(self):
         self.master_queue.put(InnerWantToEnterCriticalSection())
+
+
+    def line(self, x0, y0, x1, y1):
+      points_in_line = []
+      dx = abs(x1 - x0)
+      dy = abs(y1 - y0)
+      x, y = x0, y0
+      sx = -1 if x0 > x1 else 1
+      sy = -1 if y0 > y1 else 1
+      if dx > dy:
+          err = dx / 2.0
+          while x != x1:
+              points_in_line.append((x, y))
+              err -= dy
+              if err < 0:
+                  y += sy
+                  err += dx
+              x += sx
+      else:
+          err = dy / 2.0
+          while y != y1:
+              points_in_line.append((x, y))
+              err -= dx
+              if err < 0:
+                  x += sx
+                  err += dy
+              y += sy
+      points_in_line.append((x, y))
+      return points_in_line

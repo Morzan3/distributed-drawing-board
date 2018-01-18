@@ -39,7 +39,7 @@ class ModelThread(threading.Thread):
         self.last_token = None
 
         # Initial board state
-        self.board_state = [[0 for _ in range(config.getint('Tkinter', 'CanvasX'))] for _ in range(config.getint('Tkinter', 'CanvasY'))]
+        self.board_state = [[0 for _ in range(config.getint('Tkinter', 'CanvasY'))] for _ in range(config.getint('Tkinter', 'CanvasX'))]
 
         # If we are the first client
         if not init_data:
@@ -50,7 +50,6 @@ class ModelThread(threading.Thread):
             self.predecessor = None
             self.last_token = 0
         else:
-            print(init_data)
             self.next_hop_info = init_data['next_hop']
             if not init_data['next_next_hop']:
                 # If there is no next_next_hop init data in the response we are the second client so we set
@@ -89,12 +88,12 @@ class ModelThread(threading.Thread):
     def initialize_board(self, board_state):
         for counter in range(len(board_state)):
             x, y = board_state[counter]
-            begin = True if counter == 0 else False
-            self.paint_queue.put({'type': DrawingQueueEvent.DRAWING, 'data': (x, y, 1, begin)})
             try:
                 self.board_state[x][y] = 1
             except IndexError:
                 return
+        self.paint_queue.put({'type': DrawingQueueEvent.DRAWING, 'data': (board_state, 1)})
+
 
     def initialize_handlers(self):
         # Inner Handlers
@@ -119,28 +118,28 @@ class ModelThread(threading.Thread):
     #                                      Inner Event handlers
     ############################################################################################
     def handle_inner_draw_information_event(self, event):
-        def draw_point(event):
-            x = event.data['x']
-            y = event.data['y']
+        def draw_points(event):
             color = event.data['color']
-            begin = event.data['begin']
+            points = event.data['points']
             try:
-                self.board_state[x][y] = color
-            except IndexError:
+                for point in points:
+                  x,y = point
+                  self.board_state[x][y] = color
+            except IndexError as e:
+                print(e)
                 return
 
-            self.board_state[x][y] = color
-            self.paint_queue.put({'type': DrawingQueueEvent.DRAWING, 'data': (x, y, color, begin)})
+            self.paint_queue.put({'type': DrawingQueueEvent.DRAWING, 'data': (points, color)})
             if (self.sending_queue):
                 self.sending_queue.put(
-                    events.DrawingInformationEvent(self.uuid, helpers.get_current_timestamp(), x, y, color, begin))
+                    events.DrawingInformationEvent(self.uuid, helpers.get_current_timestamp(), points, color))
 
         if not self.critical_section:
-            draw_point(event)
+            draw_points(event)
         elif self.critical_section['timestamp'] > event.data['timestamp']:
-            draw_point(event)
+            draw_points(event)
         elif self.critical_section['client_uuid'] == self.uuid:
-            draw_point(event)
+            draw_points(event)
         elif self.critical_section['client_uuid'] != self.uuid:
             pass
 
@@ -165,7 +164,7 @@ class ModelThread(threading.Thread):
         # 3.When we succesfully connect to our next next hop we want to send recovery token question
         #   in case that the dead client was holding the token the moment he died
 
-        ip, _ = self.next_next_hop_info
+        ip, port = self.next_next_hop_info
         # If we are the only client left we reset the data to the initial state
         if ip == helpers.get_self_ip_address():
             self.critical_section = None
@@ -250,7 +249,6 @@ class ModelThread(threading.Thread):
                 logger.error(ex)
                 #Client did not initializ correctly so we abort the process
                 return
-
         # If we are not the first client we have to update our next next hop to our previous next hop
         if not first_client:
             self.next_next_hop_info = self.next_hop_info
@@ -280,16 +278,16 @@ class ModelThread(threading.Thread):
 
     def handle_drawing_information_event(self, event):
         def draw_point(event):
-            x = event.data['x']
-            y = event.data['y']
+            points = event.data['points']
             color = event.data['color']
-            begin = event.data['begin']
             try:
-                self.board_state[x][y] = color
+                for point in points:
+                  x,y = point
+                  self.board_state[x][y] = color
             except IndexError:
                 return
 
-            self.paint_queue.put({'type': DrawingQueueEvent.DRAWING, 'data': (x, y, color, begin)})
+            self.paint_queue.put({'type': DrawingQueueEvent.DRAWING, 'data': (points, color)})
             if self.sending_queue:
                 self.sending_queue.put(event)
 
@@ -367,6 +365,7 @@ class ModelThread(threading.Thread):
                 self.sending_queue.put(events.TokenPassEvent(token))
 
     def handle_new_next_next_hop_event(self, event):
+        # print('NEW next next HOP')
         post_destination_ip, _ = event.data['destination_next_hop']
         next_hop_ip, _ = self.next_hop_info
 
@@ -374,6 +373,7 @@ class ModelThread(threading.Thread):
         if post_destination_ip == next_hop_ip:
             self.next_next_hop_info = event.data['new_address']
         else:
+            # print("###"*80)
             self.sending_queue.put(event)
 
     def handle_token_received_question_event(self, event):
@@ -391,7 +391,7 @@ class ModelThread(threading.Thread):
             self.sending_queue.put(events.TokenPassEvent(token))
 
     def handle_dummy_message_event(self, event):
-        if helpers.get_self_ip_address() != event.data['ip']:
+        if self.uuid != event.data['uuid']:
             return
         else:
             if self.sending_queue:

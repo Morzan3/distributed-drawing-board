@@ -33,13 +33,11 @@ class NewClientResponseEvent(Event):
 
 # Event containing drawing information
 class DrawingInformationEvent(Event):
-    def __init__(self, client_uuid, timestamp, x, y, color, begin):
+    def __init__(self, client_uuid, timestamp, points, color):
         Event.__init__(self)
         self.data = {
-            'x': x,
-            'y': y,
+            'points': points,
             'color': color,
-            'begin': begin,
             'client_uuid': client_uuid,
             'timestamp': timestamp
         }
@@ -100,10 +98,10 @@ class TokenReceivedQuestionEvent(Event):
 
 # Dummy message event used for testing the connection
 class DummyMessageEvent(Event):
-    def __init__(self, ip):
+    def __init__(self, uuid):
         Event.__init__(self)
         self.data = {
-            'ip': ip
+            'uuid': uuid
         }
         self.event_type = EventType.DUMMY_MESSAGE
 
@@ -137,14 +135,12 @@ class InnerNewPredecessorRequestEvent(Event):
         self.data = data
 
 class InnerDrawingInformationEvent(Event):
-    def __init__(self, timestamp, x, y, color, begin):
+    def __init__(self, timestamp, points, color):
         Event.__init__(self)
         self.timestamp = timestamp
         self.data = {
-            'x': x,
-            'y': y,
+            'points': points,
             'color': color,
-            'begin': begin,
             'timestamp': timestamp
         }
 

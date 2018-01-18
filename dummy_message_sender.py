@@ -1,5 +1,6 @@
 import threading
 import logging
+import time
 from events import DummyMessageEvent
 logger = logging.getLogger(__name__)
 # Because we are relying on a TCP connection information when detecting we detect  failed connections
@@ -16,4 +17,5 @@ class DummyMessageSender(threading.Thread):
         while True:
             if self.event_queue.empty():
                 self.event_queue.put(DummyMessageEvent(self.uuid))
+                time.sleep(0.5)
 
