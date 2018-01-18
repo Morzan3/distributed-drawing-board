@@ -53,6 +53,7 @@ class Painter:
           color = 0 if self.drawing_color == 'white' else 1
           if self.x_pos is not None and self.y_pos is not None:
             points = self.line(self.x_pos, self.y_pos, event.x, event.y)
+            points = points + [(self.x_pos, self.y_pos)]
             self.master_queue.put(InnerDrawingInformationEvent(helpers.get_current_timestamp(), points, color))
           
           self.x_pos = event.x

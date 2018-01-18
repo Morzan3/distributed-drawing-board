@@ -223,8 +223,7 @@ class ModelThread(threading.Thread):
         # 2.Connect to him as a predecessor
 
         # Gather the initial board state (only the coloured spots)
-        marked_spots = [(x, y) for x in range(len(self.board_state)) for y in range(len(self.board_state[x])) if self.board_state[x][y]]
-
+        marked_spots = [(x, y) for x in range(len(self.board_state)) for y in range(len(self.board_state[x])) if self.board_state[x][y] == 1]
         # If we have next hop information we send it, if we do not have we are the first client so we send our
         # information as the first hop information
         next_hop = (helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port')) if first_client else self.next_hop_info

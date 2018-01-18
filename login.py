@@ -4,7 +4,7 @@ import tkinter.font
 import socket
 from tkinter import messagebox
 import logging
-# logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+import difflib
 logging.basicConfig(format='%(name)s - %(message)s', level=logging.INFO)
 
 logger = logging.getLogger(__name__)
@@ -14,12 +14,13 @@ import config_wrapper
 
 
 
-if len(sys.argv) > 1 and sys.argv[1] == '0':
-    config_wrapper.initialize(0)
-elif len(sys.argv) > 1 and sys.argv[1] == '1':
-    config_wrapper.initialize(1)
-elif len(sys.argv) > 1 and sys.argv[1] == '2':
-    config_wrapper.initialize(2)
+# if len(sys.argv) > 1 and sys.argv[1] == '0':
+#     config_wrapper.initialize(0)
+# elif len(sys.argv) > 1 and sys.argv[1] == '1':
+#     config_wrapper.initialize(1)
+# elif len(sys.argv) > 1 and sys.argv[1] == '2':
+#     config_wrapper.initialize(2)
+config_wrapper.initialize(0)
 
 
 # Section only for testing purpose
@@ -28,7 +29,9 @@ if len(sys.argv) > 1 and sys.argv[1] == '0':
 else:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     logger.info('Connecting to: {}'.format(config_wrapper.config.getint('NewClientListener', 'Port')))
-    s.connect(('192.168.43.71', 55008))
+    ip = config_wrapper.config.get('ConnectionInfo', 'Ip')
+    port = config_wrapper.config.getint('ConnectionInfo', 'Port')
+    s.connect((ip, port))
     connect_to_existing_client(s)
 
 class LoginPanel(tk.Frame):
