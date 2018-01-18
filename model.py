@@ -75,7 +75,7 @@ class ModelThread(threading.Thread):
             init_connection.close()
 
         # We start a dummy message sender event which will create dummy messages to detect connection breaks
-        self.dummy_message_sender = DummyMessageSender(self.event_queue, helpers.get_self_ip_address())
+        self.dummy_message_sender = DummyMessageSender(self.event_queue, self.uuid)
         self.dummy_message_sender.start()
 
 
@@ -163,8 +163,9 @@ class ModelThread(threading.Thread):
         # 2.If reconnect fails we want to connect to our next next hop
         # 3.When we succesfully connect to our next next hop we want to send recovery token question
         #   in case that the dead client was holding the token the moment he died
-
+        print("****"*100)
         ip, port = self.next_next_hop_info
+        print(self.next_next_hop_info)
         # If we are the only client left we reset the data to the initial state
         if ip == helpers.get_self_ip_address():
             self.critical_section = None
@@ -235,14 +236,18 @@ class ModelThread(threading.Thread):
         message = helpers.event_to_message(response)
         message_size = (len(message)).to_bytes(8, byteorder='big')
         event.data['connection'].send(message_size)
+        print(message)
         event.data['connection'].send(message)
 
 
-
+        print("WAITING FOR SHUTDOWN")
         try:
             message = event.data['connection'].recv(8)
         except Exception as ex:
+            print(ex)
+            print(message)
             if message == b'':
+                print("SHUUTDOWN")
                 # Only case when we have a succesfull read of 0 bytes is when other socket shutdowns normally
                 pass
             else:

@@ -28,8 +28,8 @@ class MessageSender(threading.Thread):
                 message_size = (len(message)).to_bytes(8, byteorder='big')
                 self.connection.send(message_size)
                 self.connection.send(message)
-                print("Sended", message)
             except Exception as e:
                 print(e)
+                print("****"*100)
                 self.event_queue.put(InnerNextHopBroken())
                 return
