@@ -69,6 +69,11 @@ class ModelThread(threading.Thread):
             self.message_sender = MessageSender(self.event_queue, self.sending_queue, s)
             self.message_sender.start()
             self.initialize_board(init_data['board_state'])
+            if init_data['critical_section_state']:
+              self.critical_section = init_data['critical_section_state']
+              self.paint_queue.put({'type': DrawingQueueEvent.BOARD_CLOSED})
+
+
 
             # We signal that client has initialized properly
             init_connection.shutdown(1)
@@ -164,6 +169,7 @@ class ModelThread(threading.Thread):
         #   in case that the dead client was holding the token the moment he died
         ip, port = self.next_next_hop_info
         # If we are the only client left we reset the data to the initial state
+        print(ip == helpers.get_self_ip_address())
         if ip == helpers.get_self_ip_address():
             self.critical_section = None
             self.next_hop_info = None
@@ -228,7 +234,7 @@ class ModelThread(threading.Thread):
         # information as the first hop information
         next_hop = (helpers.get_self_ip_address(), config.getint('NewPredecessorListener', 'Port')) if first_client else self.next_hop_info
         # If we are the first client next next hop is None
-        response = events.NewClientResponseEvent(next_hop, self.next_next_hop_info, marked_spots)
+        response = events.NewClientResponseEvent(next_hop, self.next_next_hop_info, marked_spots, self.critical_section)
         message = helpers.event_to_message(response)
         message_size = (len(message)).to_bytes(8, byteorder='big')
         event.data['connection'].send(message_size)

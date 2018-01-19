@@ -21,12 +21,13 @@ class Event:
 
 # Response when a new client is connecting containing the initial board state and next hops information
 class NewClientResponseEvent(Event):
-    def __init__(self, next_hop, next_next_hop, board_state):
+    def __init__(self, next_hop, next_next_hop, board_state, critical_section):
         Event.__init__(self)
         self.data = {
             'next_hop': next_hop,
             'next_next_hop': next_next_hop,
-            'board_state': board_state
+            'board_state': board_state,
+            'critical_section_state': critical_section
         }
         self.event_type = EventType.NEW_CLIENT_RESPONSE
 
