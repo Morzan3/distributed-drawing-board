@@ -91,10 +91,10 @@ class ModelThread(threading.Thread):
             handler_function(e)
 
     def initialize_board(self, board_state):
-        for counter in range(len(board_state)):
-            x, y = board_state[counter]
+        for counter in (len(board_state)):
+            x_coord, y_coord = board_state[counter]
             try:
-                self.board_state[x][y] = 1
+                self.board_state[x_coord][y_coord] = 1
             except IndexError:
                 return
         self.paint_queue.put({'type': DrawingQueueEvent.DRAWING, 'data': (board_state, 1)})
@@ -169,7 +169,6 @@ class ModelThread(threading.Thread):
         #   in case that the dead client was holding the token the moment he died
         ip, port = self.next_next_hop_info
         # If we are the only client left we reset the data to the initial state
-        print(ip == helpers.get_self_ip_address())
         if ip == helpers.get_self_ip_address():
             self.critical_section = None
             self.next_hop_info = None
@@ -284,8 +283,8 @@ class ModelThread(threading.Thread):
             color = event.data['color']
             try:
                 for point in points:
-                  x,y = point
-                  self.board_state[x][y] = color
+                    x,y = point
+                    self.board_state[x][y] = color
             except IndexError:
                 return
 

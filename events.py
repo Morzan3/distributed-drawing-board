@@ -18,7 +18,6 @@ class Event:
     def __init__(self):
         pass
 
-
 # Response when a new client is connecting containing the initial board state and next hops information
 class NewClientResponseEvent(Event):
     def __init__(self, next_hop, next_next_hop, board_state, critical_section):

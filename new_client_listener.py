@@ -1,7 +1,7 @@
 import socket
-from events import InnerNewClientRequestEvent
 import threading
 import logging
+from events import InnerNewClientRequestEvent
 from config_wrapper import config
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ class NewClientListener(threading.Thread):
         logger.info('Server is listening for new clients on port: {}'.format(self.listening_port))
         while not self._stop_event.is_set():
             connection, client_address = listening_socket.accept()
-            print("New client connected")
+            logger.info("New client connected")
             self.event_queue.put(InnerNewClientRequestEvent(connection, client_address))
 
         logger.info("New client listener stopped")

@@ -1,13 +1,10 @@
 import tkinter as tk
 import tkinter.font
-import configparser
-from config_wrapper import config
-from threading import Thread
-from queue import *
-from events import InnerDrawingInformationEvent, InnerWantToEnterCriticalSection
 import logging
-import helpers
 from enum import Enum
+from config_wrapper import config
+from events import InnerDrawingInformationEvent, InnerWantToEnterCriticalSection
+import helpers
 
 logger = logging.getLogger(__name__)
 
@@ -47,17 +44,16 @@ class Painter:
         self.y2_line_pt = event.y
 
     def motion(self, event=None):
-      if event is not None and self.left_but == 'down':
-          # Make sure x and y have a value
-          # if self.x_pos is not None and self.y_pos is not None:
-          color = 0 if self.drawing_color == 'white' else 1
-          if self.x_pos is not None and self.y_pos is not None:
-            points = self.line(self.x_pos, self.y_pos, event.x, event.y)
-            points = points + [(self.x_pos, self.y_pos)]
-            self.master_queue.put(InnerDrawingInformationEvent(helpers.get_current_timestamp(), points, color))
-          
-          self.x_pos = event.x
-          self.y_pos = event.y
+        if event is not None and self.left_but == 'down':
+            # Make sure x and y have a value
+            # if self.x_pos is not None and self.y_pos is not None:
+            color = 0 if self.drawing_color == 'white' else 1
+            if self.x_pos is not None and self.y_pos is not None:
+                points = self.line(self.x_pos, self.y_pos, event.x, event.y)
+                points = points + [(self.x_pos, self.y_pos)]
+                self.master_queue.put(InnerDrawingInformationEvent(helpers.get_current_timestamp(), points, color))
+            self.x_pos = event.x
+            self.y_pos = event.y
 
     def __init__(self, paint_queue, master_queue):
         self.master = tkinter.Tk()
@@ -89,11 +85,9 @@ class Painter:
                     points, color = e['data']
                     color = 'white' if color == 0 else 'black'
 
-
                     for point in points: 
-                    # self.drawing_area.create_line(self.x_pos, self.y_pos, data['x'], data['y'], fill=color)
-                      x, y = point
-                      self.drawing_area.create_rectangle((x, y)*2, outline=color)
+                      x_coord, y_coord = point
+                      self.drawing_area.create_rectangle((x_coord, y_coord)*2, outline=color)
                 elif e['type'] == DrawingQueueEvent.BOARD_CLOSED:
                     self.critical_section_string.set("Board closed")
                 elif e['type'] == DrawingQueueEvent.BOARD_OPEN:
@@ -117,7 +111,6 @@ class Painter:
 
     def want_to_enter_critial_section(self):
         self.master_queue.put(InnerWantToEnterCriticalSection())
-
 
     def line(self, x0, y0, x1, y1):
       points_in_line = []

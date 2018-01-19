@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 # This is thread responsible for listening for a new predecessor connections (not messages itself).
 # It is responsible for creating a new predecessor connection or shutting down old one and creating a new one
 
-
 class NewPredecessorListener(threading.Thread):
     def __init__(self, event_queue, init_data=None):
         super(NewPredecessorListener, self).__init__()

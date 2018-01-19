@@ -1,17 +1,19 @@
-import threading
-import time
 import json
 import queue
+import sys
+import logging
+import socket
+
+import helpers
+import events
 from time_thread import TimeSynchronizer
 from new_client_listener import NewClientListener
 from new_predecessor_listener import NewPredecessorListener
 from model import ModelThread
 from painter import Painter
-import helpers
 from config_wrapper import config
-import events
+logging.basicConfig(format='%(name)s - %(message)s', level=logging.INFO)
 
-import logging
 logger = logging.getLogger(__name__)
 
 def connect_to_existing_client(connection):
@@ -54,6 +56,7 @@ def connect_to_existing_client(connection):
     model = ModelThread(main_queue, paint_queue, time_offset, init_data, connection)
     model.start()
 
+    # We start the painter as it must be in the main thread
     painter = Painter(paint_queue, main_queue)
     painter.start_drawing()
 
@@ -80,6 +83,19 @@ def start_new_group():
     model = ModelThread(main_queue, paint_queue, time_offset)
     model.start()
 
+    # We start the painter as it must be in the main thread
     painter = Painter(paint_queue, main_queue)
     painter.start_drawing()
 
+
+
+if __name__ == "__main__":
+  if len(sys.argv) > 1 and sys.argv[1] == '0':
+    start_new_group()
+  else:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    logger.info('Connecting to: {}'.format(config.getint('NewClientListener', 'Port')))
+    ip = config.get('ConnectionInfo', 'Ip')
+    port = config.getint('ConnectionInfo', 'Port')
+    s.connect((ip, port))
+    connect_to_existing_client(s)

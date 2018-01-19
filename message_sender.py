@@ -1,8 +1,7 @@
-from events import InnerNextHopBroken
 import threading
 import logging
-import json
 import helpers
+from events import InnerNextHopBroken
 logger = logging.getLogger(__name__)
 # This is thread responsible for listening for predecessor
 

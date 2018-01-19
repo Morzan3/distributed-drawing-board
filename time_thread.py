@@ -1,6 +1,6 @@
+import threading
 import time
 import ntplib
-import threading
 
 class TimeSynchronizer(threading.Thread):
     def __init__(self, time_offset):
